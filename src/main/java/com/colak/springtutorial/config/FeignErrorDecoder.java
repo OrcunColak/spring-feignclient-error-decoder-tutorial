@@ -4,11 +4,10 @@ import feign.Response;
 import feign.codec.ErrorDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 @Slf4j
@@ -27,19 +26,15 @@ public class FeignErrorDecoder implements ErrorDecoder {
     }
 
     private String getErrorMessage(Response response) {
-        if (response.body() == null) {
+        Response.Body body = response.body();
+        if (body == null) {
             return "No error message available.";
         }
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(response.body().asInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder errorMessageBuilder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                errorMessageBuilder.append(line);
-            }
-            return errorMessageBuilder.toString();
-        } catch (IOException e) {
+        try {
+            // Use Spring's StreamUtils to read the input stream
+            return StreamUtils.copyToString(body.asInputStream(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
             return "Failed to read error message.";
         }
     }
